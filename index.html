@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Gestión de Inventarios — IACC 2026</title>
+  <meta name="description" content="Seminario de Título — Felipe Valenzuela Carrasco">
+  <link rel="manifest" href="data:application/manifest+json,{%22name%22%3A%22Inventarios%22%2C%22short_name%22%3A%22Inventario%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22theme_color%22%3A%22%235A8A24%22}">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F5F5F5;
+      color: #343336;
+      min-height: 100vh;
+    }
+    /* ========== HEADER ========== */
+    .header {
+      background: #5A8A24;
+      color: white;
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .header-title { font-size: 18px; font-weight: 700; }
+    .header-user { font-size: 13px; display: flex; align-items: center; gap: 8px; }
+    .dot-online { width: 10px; height: 10px; background: #4AE250; border-radius: 50%; }
+
+    /* ========== TABS ========== */
+    .tabs {
+      display: flex;
+      background: white;
+      border-bottom: 1px solid #E0E0E0;
+    }
+    .tab {
+      flex: 1;
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 600;
+      color: #7A7A7A;
+      transition: all 0.2s;
+      border-bottom: 3px solid transparent;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+    }
+    .tab:hover { background: #F9F9F9; }
+    .tab.active {
+      color: #5A8A24;
+      border-bottom-color: #8CC63F;
+      background: #F4F9EC;
+    }
+
+    /* ========== CONTAINER ========== */
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .page-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #343336;
+    }
+    .page-subtitle {
+      font-size: 13px;
+      color: #7A7A7A;
+      font-style: italic;
+      margin-bottom: 20px;
+    }
+
+    /* ========== SCAN INPUT ========== */
+    .scan-area {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .scan-input-wrap {
+      flex: 1;
+      position: relative;
+      background: white;
+      border: 2px solid #8CC63F;
+      border-radius: 8px;
+      padding: 10px 16px 10px 44px;
+    }
+    .scan-input-wrap::before {
+      content: '🔍';
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 18px;
+    }
+    .scan-input-wrap input {
+      width: 100%;
+      border: none;
+      font-size: 16px;
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      color: #343336;
+      outline: none;
+      background: transparent;
+    }
+    .scan-status {
+      font-size: 11px;
+      color: #5A8A24;
+      font-style: italic;
+      margin-top: 2px;
+    }
+    .btn {
+      padding: 12px 22px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: #8CC63F; color: white; }
+    .btn-primary:hover { background: #7AB52F; }
+    .btn-confirm { background: #5A8A24; color: white; }
+    .btn-confirm:hover { background: #4A7A1C; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ========== PRODUCT CARD ========== */
+    .product-card {
+      background: #F4F9EC;
+      border: 1.5px solid #5A8A24;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .product-row {
+      display: flex;
+      align-items: center;
+      padding: 6px 0;
+      font-size: 14px;
+    }
+    .product-label {
+      font-weight: 700;
+      color: #343336;
+      min-width: 160px;
+    }
+    .product-value { color: #343336; }
+    .product-row.actions {
+      margin-top: 12px;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .qty-input {
+      width: 100px;
+      padding: 8px 12px;
+      border: 1.5px solid #343336;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+      text-align: center;
+    }
+    .validation-ok {
+      color: #5A8A24;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+    .validation-ok::before {
+      content: '';
+      width: 12px;
+      height: 12px;
+      background: #8CC63F;
+      border-radius: 50%;
+    }
+
+    /* ========== STATUS BAR ========== */
+    .status-bar {
+      background: white;
+      border: 1px solid #E0E0E0;
+      border-radius: 6px;
+      padding: 10px 16px;
+      margin-top: 12px;
+      display: flex;
+      gap: 24px;
+      font-size: 12px;
+      flex-wrap: wrap;
+    }
+    .status-bar .latency { color: #5A8A24; font-weight: 700; }
+    .status-bar .server { color: #5A8A24; display: flex; align-items: center; gap: 6px; }
+    .status-bar .server::before {
+      content: '';
+      width: 8px; height: 8px;
+      background: #5A8A24;
+      border-radius: 50%;
+    }
+    .status-bar .sync { color: #7A7A7A; }
+    .status-bar .session { color: #343336; }
+
+    /* ========== TRANSACTIONS LIST ========== */
+    .tx-list {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #E0E0E0;
+    }
+    .tx-row {
+      padding: 12px 16px;
+      border-bottom: 1px solid #F0F0F0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .tx-row:last-child { border-bottom: none; }
+    .tx-row:hover { background: #F9F9F9; }
+    .tx-info { display: flex; flex-direction: column; gap: 2px; }
+    .tx-sku { font-family: 'Courier New', monospace; font-weight: 700; font-size: 13px; }
+    .tx-meta { font-size: 11px; color: #7A7A7A; }
+    .tx-qty {
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .tx-qty.receive { background: #E8F5D5; color: #5A8A24; }
+    .tx-qty.dispatch { background: #FDE8E8; color: #C0392B; }
+
+    /* ========== HEALTH PANEL ========== */
+    .health-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .health-card {
+      background: white;
+      border: 1px solid #E0E0E0;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .health-card-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #7A7A7A;
+      margin-bottom: 8px;
+    }
+    .health-card-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #5A8A24;
+    }
+    .health-card-meta {
+      font-size: 11px;
+      color: #7A7A7A;
+      margin-top: 4px;
+    }
+
+    /* ========== TOAST ========== */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #5A8A24;
+      color: white;
+      padding: 14px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      animation: slideIn 0.3s ease;
+      max-width: 360px;
+      font-size: 13px;
+    }
+    .toast.error { background: #C0392B; }
+    @keyframes slideIn {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* ========== LOGIN ========== */
+    .login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #343336 0%, #1a1a1a 100%);
+      padding: 24px;
+    }
+    .login-box {
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .login-logo {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .login-logo-icon {
+      width: 70px;
+      height: 70px;
+      background: #8CC63F;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      color: white;
+      margin-bottom: 12px;
+    }
+    .login-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #343336;
+    }
+    .login-subtitle {
+      font-size: 13px;
+      color: #7A7A7A;
+      margin-top: 4px;
+    }
+    .login-form { display: flex; flex-direction: column; gap: 14px; margin-top: 24px; }
+    .login-input {
+      padding: 12px 14px;
+      border: 1.5px solid #E0E0E0;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+    }
+    .login-input:focus { border-color: #8CC63F; }
+    .login-btn {
+      background: #5A8A24;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .login-btn:hover { background: #4A7A1C; }
+    .login-help {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #F0F0F0;
+      font-size: 12px;
+      color: #7A7A7A;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .login-help code {
+      background: #F4F9EC;
+      color: #5A8A24;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+    }
+    .login-error {
+      color: #C0392B;
+      font-size: 12px;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- =========================================================
+     LOGIN SCREEN
+     ========================================================= -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-icon">📦</div>
+      <div class="login-title">Sistema de Inventarios</div>
+      <div class="login-subtitle">Seminario de Título · IACC 2026</div>
+    </div>
+    <form class="login-form" onsubmit="login(event)">
+      <input type="text" id="loginUser" class="login-input" placeholder="Usuario" autocomplete="username" required>
+      <input type="password" id="loginPass" class="login-input" placeholder="Contraseña" autocomplete="current-password" required>
+      <button type="submit" class="login-btn">INGRESAR</button>
+      <div id="loginError" class="login-error hidden"></div>
+    </form>
+    <div class="login-help">
+      <strong>Credenciales de demostración:</strong><br>
+      Usuario: <code>demo</code> · Contraseña: <code>demo2026</code>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     APP PRINCIPAL
+     ========================================================= -->
+<div id="app" class="hidden">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-title">Sistema de Gestión de Inventarios</div>
+    <div class="header-user">
+      <span class="dot-online"></span>
+      <span id="headerUser">Operario: -</span>
+      <button onclick="logout()" style="margin-left:16px;background:rgba(255,255,255,0.15);border:none;color:white;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:11px;">SALIR</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="changeTab('reception')">RECEPCIÓN</div>
+    <div class="tab" onclick="changeTab('dispatch')">DESPACHO</div>
+    <div class="tab" onclick="changeTab('history')">HISTORIAL</div>
+    <div class="tab" onclick="changeTab('health')">ESTADO</div>
+  </div>
+
+  <div class="container">
+
+    <!-- ========== TAB: RECEPCIÓN ========== -->
+    <div id="tab-reception" class="tab-content">
+      <div class="page-title">Recepción de Stock</div>
+      <div class="page-subtitle">Escanee el código SKU o ingréselo manualmente · Validación en tiempo real</div>
+
+      <div class="scan-area">
+        <div class="scan-input-wrap">
+          <input type="text" id="skuInput" placeholder="Ingrese SKU (ej: SKU-2026-04587)" oninput="onSkuInput()" autocomplete="off">
+          <div id="skuStatus" class="scan-status"></div>
+        </div>
+        <button class="btn btn-primary" onclick="loadDemoSku()">[ ] DEMO</button>
+      </div>
+
+      <div id="productCard" class="hidden"></div>
+
+      <div class="status-bar">
+        <span class="latency">⚡ Latencia: <span id="latencyValue">--</span> ms</span>
+        <span class="server">Servidor: online</span>
+        <span class="sync">Última sincronización: <span id="syncValue">--</span></span>
+        <span class="session">Sesión: <span id="sessionCount">0</span> escaneos · <span id="errorCount">0</span> errores</span>
+      </div>
+    </div>
+
+    <!-- ========== TAB: DESPACHO ========== -->
+    <div id="tab-dispatch" class="tab-content hidden">
+      <div class="page-title">Despacho de Stock</div>
+      <div class="page-subtitle">Funcionalidad equivalente a recepción con validación de disponibilidad ACID</div>
+      <div style="padding:60px;text-align:center;background:white;border-radius:8px;border:1px dashed #CCC;color:#7A7A7A;">
+        Módulo idéntico a Recepción, con validación adicional de stock disponible<br>antes de comprometer la transacción (rollback automático si stock insuficiente).
+      </div>
+    </div>
+
+    <!-- ========== TAB: HISTORIAL ========== -->
+    <div id="tab-history" class="tab-content hidden">
+      <div class="page-title">Historial de Transacciones</div>
+      <div class="page-subtitle">Log inmutable de movimientos con sello de tiempo · ACID compliant</div>
+      <div id="txList" class="tx-list"></div>
+    </div>
+
+    <!-- ========== TAB: ESTADO ========== -->
+    <div id="tab-health" class="tab-content hidden">
+      <div class="page-title">Estado del Sistema</div>
+      <div class="page-subtitle">Monitoreo en tiempo real de los microservicios desacoplados</div>
+
+      <div class="health-grid">
+        <div class="health-card">
+          <div class="health-card-title">Microservicio · Inventario</div>
+          <div class="health-card-value">● Online</div>
+          <div class="health-card-meta">Latencia: <span id="health-inv">156 ms</span></div>
+        </div>
+        <div class="health-card">
+          <div class="health-card-title">Microservicio · Autenticación</div>
+          <div class="health-card-value">● Online</div>
+          <div class="health-card-meta">Latencia: <span id="health-auth">82 ms</span></div>
+        </div>
+        <div class="health-card">
+          <div class="health-card-title">Microservicio · Transacciones</div>
+          <div class="health-card-value">● Online</div>
+          <div class="health-card-meta">Latencia: <span id="health-tx">198 ms</span> · ACID compliant</div>
+        </div>
+        <div class="health-card">
+          <div class="health-card-title">Base de datos · PostgreSQL</div>
+          <div class="health-card-value">● Online</div>
+          <div class="health-card-meta">Conexiones activas: 3/20</div>
+        </div>
+        <div class="health-card">
+          <div class="health-card-title">Uptime sistema</div>
+          <div class="health-card-value" id="uptime">--</div>
+          <div class="health-card-meta">desde último despliegue</div>
+        </div>
+        <div class="health-card">
+          <div class="health-card-title">SLA configurado</div>
+          <div class="health-card-value">&lt; 200 ms</div>
+          <div class="health-card-meta">cumplimiento: 99.9%</div>
+        </div>
+      </div>
+
+      <div style="background:white;border:1px solid #E0E0E0;border-radius:8px;padding:20px;margin-top:20px;">
+        <div style="font-weight:700;margin-bottom:12px;color:#343336;">Endpoints expuestos</div>
+        <div style="font-family:'Courier New',monospace;font-size:13px;line-height:1.8;color:#343336;">
+          <div><span style="color:#5A8A24;font-weight:700;">GET</span>  /api/inventory/scan/:sku</div>
+          <div><span style="color:#5A8A24;font-weight:700;">GET</span>  /api/inventory/products</div>
+          <div><span style="color:#5A8A24;font-weight:700;">GET</span>  /api/inventory/stats</div>
+          <div><span style="color:#8CC63F;font-weight:700;">POST</span> /api/transactions/receive</div>
+          <div><span style="color:#8CC63F;font-weight:700;">POST</span> /api/transactions/dispatch</div>
+          <div><span style="color:#8CC63F;font-weight:700;">POST</span> /api/auth/login</div>
+          <div><span style="color:#5A8A24;font-weight:700;">GET</span>  /health</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ================================================================
+// DATOS DEMO
+// ================================================================
+const PRODUCTS = {
+  'SKU-2026-04587': { name: 'Notebook Lenovo ThinkPad E14', location: 'Pasillo B · Estante 04 · Posición 12', stock: 47 },
+  'SKU-2026-04588': { name: 'Monitor LG UltraWide 29"', location: 'Pasillo B · Estante 05 · Posición 03', stock: 23 },
+  'SKU-2026-04589': { name: 'Teclado mecánico Logitech G Pro', location: 'Pasillo A · Estante 02 · Posición 07', stock: 85 },
+  'SKU-2026-04590': { name: 'Mouse Logitech MX Master 3S', location: 'Pasillo A · Estante 02 · Posición 08', stock: 12 },
+  'SKU-2026-04591': { name: 'SSD Samsung 980 PRO 1TB', location: 'Pasillo C · Estante 01 · Posición 04', stock: 56 },
+  'SKU-2026-04592': { name: 'RAM Kingston Fury 16GB DDR4', location: 'Pasillo C · Estante 01 · Posición 09', stock: 78 },
+  'SKU-2026-04624': { name: 'Pistola lectora Honeywell Voyager', location: 'Pasillo E · Estante 03 · Posición 06', stock: 5 },
+  'SKU-2026-04625': { name: 'Pistola lectora 2D Zebra DS2208', location: 'Pasillo E · Estante 03 · Posición 07', stock: 8 }
+};
+
+let session = { user: null, scans: 0, errors: 0, transactions: [] };
+let currentSku = null;
+const startTime = Date.now();
+
+// ================================================================
+// LOGIN
+// ================================================================
+function login(e) {
+  e.preventDefault();
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+
+  // Validación simulada con pequeña latencia (realismo)
+  setTimeout(() => {
+    if ((u === 'demo' && p === 'demo2026') || (u === 'fvalenzuela' && p === 'demo2026')) {
+      session.user = u === 'demo' ? 'Usuario Demo' : 'Felipe Valenzuela';
+      document.getElementById('headerUser').textContent = 'Operario: ' + session.user;
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      errEl.classList.add('hidden');
+      loadHistory();
+    } else {
+      errEl.textContent = 'Credenciales inválidas';
+      errEl.classList.remove('hidden');
+    }
+  }, 180);
+}
+
+function logout() {
+  session = { user: null, scans: 0, errors: 0, transactions: [] };
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+}
+
+// ================================================================
+// TABS
+// ================================================================
+function changeTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+  document.getElementById('tab-' + name).classList.remove('hidden');
+}
+
+// ================================================================
+// SCAN INPUT
+// ================================================================
+function onSkuInput() {
+  const sku = document.getElementById('skuInput').value.trim().toUpperCase();
+  const status = document.getElementById('skuStatus');
+  const card = document.getElementById('productCard');
+
+  if (sku.length < 8) {
+    status.textContent = '';
+    card.classList.add('hidden');
+    return;
+  }
+
+  // Simular consulta a API con latencia realista (130-180ms)
+  const latency = 130 + Math.random() * 50;
+  status.textContent = 'Consultando...';
+
+  setTimeout(() => {
+    const product = PRODUCTS[sku];
+    if (product) {
+      currentSku = sku;
+      status.textContent = `Producto reconocido · Respuesta en ${Math.round(latency)} ms`;
+      renderProduct(sku, product, Math.round(latency));
+      session.scans++;
+      updateSession(Math.round(latency));
+    } else {
+      currentSku = null;
+      status.textContent = 'SKU no registrado';
+      status.style.color = '#C0392B';
+      card.classList.add('hidden');
+    }
+  }, latency);
+}
+
+function loadDemoSku() {
+  document.getElementById('skuInput').value = 'SKU-2026-04587';
+  onSkuInput();
+}
+
+function renderProduct(sku, product, latency) {
+  const card = document.getElementById('productCard');
+  card.classList.remove('hidden');
+  card.className = 'product-card';
+  card.innerHTML = `
+    <div class="product-row">
+      <div class="product-label">Producto:</div>
+      <div class="product-value">${product.name}</div>
+    </div>
+    <div class="product-row">
+      <div class="product-label">SKU:</div>
+      <div class="product-value" style="font-family:'Courier New',monospace;font-weight:700;">${sku}</div>
+    </div>
+    <div class="product-row">
+      <div class="product-label">Ubicación:</div>
+      <div class="product-value">${product.location}</div>
+    </div>
+    <div class="product-row">
+      <div class="product-label">Stock actual:</div>
+      <div class="product-value" style="font-weight:700;">${product.stock} unidades</div>
+    </div>
+    <div class="product-row actions">
+      <div class="product-label">Cantidad a recibir:</div>
+      <input type="number" id="qtyInput" class="qty-input" value="25" min="1" max="999">
+      <button class="btn btn-confirm" onclick="confirmTransaction()">✓ CONFIRMAR</button>
+      <div class="validation-ok">Validación OK · ACID compliant</div>
+    </div>
+  `;
+}
+
+function confirmTransaction() {
+  if (!currentSku) return;
+  const qty = parseInt(document.getElementById('qtyInput').value) || 0;
+  if (qty <= 0) {
+    toast('La cantidad debe ser mayor que cero', true);
+    return;
+  }
+
+  const product = PRODUCTS[currentSku];
+  const prevStock = product.stock;
+  product.stock += qty;
+
+  const tx = {
+    id: Date.now(),
+    sku: currentSku,
+    name: product.name,
+    type: 'RECEIVE',
+    qty,
+    prev: prevStock,
+    new: product.stock,
+    user: session.user,
+    time: new Date()
+  };
+  session.transactions.unshift(tx);
+
+  toast(`Transacción ${tx.id} confirmada · +${qty} unidades de ${product.name}`);
+
+  // Reset
+  document.getElementById('skuInput').value = '';
+  document.getElementById('productCard').classList.add('hidden');
+  document.getElementById('skuStatus').textContent = '';
+  currentSku = null;
+  loadHistory();
+}
+
+// ================================================================
+// HISTORIAL
+// ================================================================
+function loadHistory() {
+  const list = document.getElementById('txList');
+  // Si no hay transacciones de la sesión, mostrar las históricas demo
+  const txs = session.transactions.length > 0 ? session.transactions : generateHistoricalTxs();
+
+  list.innerHTML = txs.slice(0, 20).map(tx => `
+    <div class="tx-row">
+      <div class="tx-info">
+        <div class="tx-sku">${tx.sku} · ${tx.name}</div>
+        <div class="tx-meta">${tx.time instanceof Date ? formatTime(tx.time) : tx.time} · Operario: ${tx.user}</div>
+      </div>
+      <div class="tx-qty ${tx.type === 'RECEIVE' ? 'receive' : 'dispatch'}">
+        ${tx.type === 'RECEIVE' ? '+' : '−'}${tx.qty}
+      </div>
+    </div>
+  `).join('');
+}
+
+function generateHistoricalTxs() {
+  const skus = Object.keys(PRODUCTS);
+  const users = ['Juan Pérez', 'María López', 'Carlos Rojas', 'Ana Ramos'];
+  const out = [];
+  for (let i = 0; i < 15; i++) {
+    const sku = skus[Math.floor(Math.random() * skus.length)];
+    const minutesAgo = (i + 1) * (5 + Math.floor(Math.random() * 30));
+    out.push({
+      id: 10000 - i,
+      sku,
+      name: PRODUCTS[sku].name,
+      type: Math.random() > 0.4 ? 'RECEIVE' : 'DISPATCH',
+      qty: 1 + Math.floor(Math.random() * 30),
+      user: users[Math.floor(Math.random() * users.length)],
+      time: `hace ${minutesAgo} min`
+    });
+  }
+  return out;
+}
+
+function formatTime(d) {
+  const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (diff < 60) return `hace ${diff} seg`;
+  if (diff < 3600) return `hace ${Math.floor(diff / 60)} min`;
+  return d.toLocaleTimeString('es-CL');
+}
+
+// ================================================================
+// STATUS BAR
+// ================================================================
+function updateSession(latency) {
+  document.getElementById('latencyValue').textContent = latency;
+  document.getElementById('sessionCount').textContent = session.scans;
+  document.getElementById('errorCount').textContent = session.errors;
+  document.getElementById('syncValue').textContent = 'hace 1 seg';
+}
+
+setInterval(() => {
+  const syncEl = document.getElementById('syncValue');
+  if (syncEl) {
+    const sec = Math.floor(Math.random() * 5) + 1;
+    syncEl.textContent = `hace ${sec} seg`;
+  }
+  // Actualizar latencias del panel de salud aleatoriamente
+  const updateHealth = (id, min, max) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = `${min + Math.floor(Math.random() * (max - min))} ms`;
+  };
+  updateHealth('health-inv', 140, 175);
+  updateHealth('health-auth', 70, 95);
+  updateHealth('health-tx', 180, 215);
+
+  // Uptime
+  const uptime = Math.floor((Date.now() - startTime) / 1000);
+  const upEl = document.getElementById('uptime');
+  if (upEl) {
+    const h = Math.floor(uptime / 3600);
+    const m = Math.floor((uptime % 3600) / 60);
+    const s = uptime % 60;
+    upEl.textContent = `${h}h ${m}m ${s}s`;
+  }
+}, 2000);
+
+// ================================================================
+// TOAST
+// ================================================================
+function toast(msg, isError) {
+  const t = document.createElement('div');
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// Atajos de teclado: Enter en SKU
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.activeElement.id === 'skuInput') {
+    e.preventDefault();
+    if (currentSku) {
+      document.getElementById('qtyInput')?.focus();
+    }
+  }
+});
+</script>
+
+</body>
+</html>
